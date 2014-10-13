@@ -6,13 +6,21 @@ module KnockoutForms
 
       module Methods
 
+        # Define attribute to bind based on input kind
+        MAPPINGS = {
+          value: %W(text_field number_field hidden_field),
+          checked: %W(check_box radio_button)
+        }
+
         def self.included(form)
           # Wrap all input fields so they add a KO value data bind
-          %W(text_field number_field hidden_field).each do |field_name|
-            form.send(:define_method, field_name) do |name, *args|
-              opts = args.extract_options!
-              opts['data-bind'] = "value: #{name}" unless opts.delete(:bind) == false
-              super(name, *(args << opts))
+          MAPPINGS.each do |bind, fields|
+            fields.each do |field_name|
+              form.send(:define_method, field_name) do |name, *args|
+                opts = args.extract_options!
+                opts['data-bind'] = "#{bind}: #{name}" unless opts.delete(:bind) == false
+                super(name, *(args << opts))
+              end
             end
           end
         end
