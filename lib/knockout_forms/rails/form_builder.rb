@@ -17,8 +17,8 @@ module KnockoutForms
           MAPPINGS.each do |bind, fields|
             fields.each do |field_name|
               form.send(:define_method, field_name) do |name, *args|
-                opts = args.extract_options!
-                opts['data-bind'] = "#{bind}: #{name}" unless opts.delete(:bind) == false
+                opts = args.extract_options!.with_indifferent_access
+                add_data_bind(opts, bind, name)
                 super(name, *(args << opts))
               end
             end
@@ -27,11 +27,13 @@ module KnockoutForms
 
         # Handle select differently due to the html opts
         def select(method, choices = nil, options = {}, html_options = {}, &block)
-          html_options['data-bind'] = "value: #{method}" unless options.delete(:bind) == false
+          html_options = html_options.with_indifferent_access
+          add_data_bind(html_options, 'value', method)
           super(method, choices, options, html_options, &block)
         end
 
         def fields_for(collection_name, options={}, &block)
+          options = options.with_indifferent_access
           empty_child = options[:empty] || object.association(collection_name).klass.new
           collection = options[:collection] || collection_name
           # Run fields_for with a single empty child that will act as the KO template for each item
@@ -44,31 +46,46 @@ module KnockoutForms
         end
 
         def add_item(collection_name, options={})
+          options = options.with_indifferent_access
           child_klass = object.association(collection_name).klass
-          empty_child = child_klass.new
+          label = options.delete(:label) || "Add new #{child_klass.model_name.singular}"
+          handler = add_item_handler(collection_name, options)
+          action(label, handler, options)
+        end
+
+        def add_item_handler(collection_name, options={})
+          options = options.with_indifferent_access
+          child_klass = object.association(collection_name).klass
 
           label = options.delete(:label) || "Add new #{child_klass.model_name.singular}"
           viewmodel_collection = options.delete(:collection) || collection_name
           viewmodel = options.delete(:child_class) || child_klass.name
 
           # Create an empty child to inject attributes via KO mapping
-          model = empty_child.to_json
+          model = options.delete(:model) || child_klass.new.to_json
 
           # Create new child viewmodel augmented with model attributes and
           # automatically add to viewmodel collection on click
-          click_handler = options[:handler] || <<-JS_HANDLER
+          options[:handler] || <<-JS_HANDLER
             function(data, event) {
               var viewmodel = new #{viewmodel}(data);
               ko.mapping.fromJS(#{model}, {}, viewmodel);
               #{viewmodel_collection}.push(viewmodel);
             };
           JS_HANDLER
-
-          action(label, click_handler, options)
         end
 
         def action(label, action, options={})
-          @template.link_to(label, '#', options.merge('data-bind' => "click: #{action}"))
+          add_data_bind(options, 'click', action)
+          @template.link_to(label, '#', options)
+        end
+
+        private
+
+        def add_data_bind(opts, key, value)
+          unless opts.delete(:bind) == false
+            opts['data-bind'] = [opts['data-bind'], "#{key}: #{value}"].compact.join(', ')
+          end
         end
 
       end
