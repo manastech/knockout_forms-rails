@@ -22,5 +22,5 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "rake"
 
   spec.add_runtime_dependency "railties", [">= 3.1", "< 5"]
-  spec.add_runtime_dependency "actionview", [">= 3", "< 5"]
+  spec.add_runtime_dependency "actionpack", [">= 3", "< 5"]
 end
