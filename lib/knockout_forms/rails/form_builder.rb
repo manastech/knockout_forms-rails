@@ -8,7 +8,7 @@ module KnockoutForms
 
         # Define attribute to bind based on input kind
         MAPPINGS = {
-          value: %W(text_field number_field hidden_field),
+          value: %W(text_field text_area number_field hidden_field),
           checked: %W(check_box radio_button)
         }
 
